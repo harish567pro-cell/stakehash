@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-Mode Mines Tool</title>
+    <title>Mines Provably Fair Dashboard</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
         body {
-            font-family: 'Segoe UI', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #0f212e;
             color: #fff;
             display: flex;
@@ -25,15 +25,6 @@
             width: 100%;
         }
         h2 { text-align: center; color: #00e676; margin-top: 0; }
-        .mode-select {
-            display: flex;
-            justify-content: space-around;
-            margin-bottom: 20px;
-            background: #0f212e;
-            padding: 10px;
-            border-radius: 4px;
-        }
-        .mode-option { cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 14px; }
         .input-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; color: #b1b6bb; }
         input {
@@ -45,6 +36,7 @@
             color: #fff;
             box-sizing: border-box;
             font-family: monospace;
+            font-size: 13px;
         }
         button {
             width: 100%;
@@ -56,19 +48,20 @@
             font-weight: bold;
             font-size: 16px;
             cursor: pointer;
+            transition: background 0.2s;
             margin-top: 10px;
         }
         button:hover { background-color: #00c853; }
         .status-box {
             margin-top: 15px;
-            padding: 10px;
+            padding: 12px;
             border-radius: 4px;
-            background: #243b4a;
             font-size: 13px;
             text-align: center;
             display: none;
-            border-left: 4px solid #ffb300;
         }
+        .status-success { background-color: rgba(0, 230, 118, 0.15); border-left: 4px solid #00e676; color: #00e676; }
+        .status-fail { background-color: rgba(255, 179, 0, 0.15); border-left: 4px solid #ffb300; color: #ffb300; }
         .grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
@@ -85,78 +78,56 @@
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            font-size: 16px;
-            background-color: #2f4553;
+            font-size: 18px;
         }
         .bomb { background-color: #ff5252; color: #fff; }
         .gem { background-color: #00e676; color: #0f212e; box-shadow: 0 0 10px #00e676; }
-        .unknown { background-color: #3d5a80; color: #fff; font-size: 20px; }
+        .hidden-tile { background-color: #2f4553; color: #b1b6bb; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Mines Analyzer Dashboard</h2>
-    
-    <div class="mode-select">
-        <label class="mode-option">
-            <input type="radio" name="verifyMode" value="unhashed" checked onchange="toggleInputs()"> Unhashed Mode
-        </label>
-        <label class="mode-option">
-            <input type="radio" name="verifyMode" value="hashed" onchange="toggleInputs()"> Hashed (Active) Mode
-        </label>
-    </div>
-    
-    <div class="input-group" id="serverSeedGroup">
-        <label id="seedLabel" for="serverSeed">Unhashed Server Seed</label>
-        <input type="text" id="serverSeed" value="6a2686c13bde9a758fe4585b3070ab322db307db17127048ce5dd4f222db74ae">
-    </div>
+    <h2>Mines Guard Tool</h2>
     
     <div class="input-group">
         <label for="clientSeed">Client Seed</label>
         <input type="text" id="clientSeed" value="CTX9QA5P91">
     </div>
+
+    <div class="input-group">
+        <label for="hashedSeed">Hashed Server Seed</label>
+        <input type="text" id="hashedSeed" value="1cc5dc49b12009a9c760523c09e35a7e00eccb411f33cacbb5420e5d38e2dcca" placeholder="Enter SHA-256 string from Stake...">
+    </div>
     
-    <div class="input-group" id="nonceGroup">
-        <label for="nonce">Nonce (Bet Number)</label>
+    <div class="input-group">
+        <label for="serverSeed">Unhashed Server Seed</label>
+        <input type="text" id="serverSeed" value="6a2686c13bde9a758fe4585b3070ab322db307db17127048ce5dd4f222db74ae" placeholder="Enter decrypted seed after rotation...">
+    </div>
+
+    <div class="input-group">
+        <label for="nonce">Nonce (Game Bet Number)</label>
         <input type="number" id="nonce" value="1" min="1">
     </div>
     
-    <button onclick="processInputData()">Run Verification Map</button>
+    <button onclick="verifyMinesGame()">Verify Layout Matrix</button>
 
     <div class="status-box" id="statusMessage"></div>
 
-    <div class="grid" id="minesGrid"></div>
+    <div class="grid" id="minesGrid">
+        </div>
 </div>
 
 <script>
-function toggleInputs() {
-    const mode = document.querySelector('input[name="verifyMode"]:checked').value;
-    const seedLabel = document.getElementById('seedLabel');
-    const serverSeedInput = document.getElementById('serverSeed');
-    const nonceGroup = document.getElementById('nonceGroup');
-    const statusBox = document.getElementById('statusMessage');
-    
-    document.getElementById('minesGrid').innerHTML = '';
-    statusBox.style.display = 'none';
-
-    if (mode === 'unhashed') {
-        seedLabel.innerText = "Unhashed Server Seed";
-        serverSeedInput.value = "6a2686c13bde9a758fe4585b3070ab322db307db17127048ce5dd4f222db74ae";
-        nonceGroup.style.display = "block";
-    } else {
-        seedLabel.innerText = "Hashed Server Seed (Active)";
-        serverSeedInput.value = "1cc5dc49b12009a9c760523c09e35a7e00eccb411f33cacbb5420e5d38e2dcca";
-        nonceGroup.style.display = "none";
-    }
-}
-
 function getBoardSequence(serverSeed, clientSeed, nonce) {
     let byteSequence = [];
     let subNonce = 0;
+    
+    // Mimics loop constraint matching the Python while loop (< 96 bytes)
     while (byteSequence.length < 96) {
         let message = `${clientSeed}:${nonce}:${subNonce}`;
         let hash = CryptoJS.HmacSHA256(message, serverSeed).toString(CryptoJS.enc.Hex);
+        
         for (let i = 0; i < hash.length; i += 2) {
             byteSequence.push(parseInt(hash.substr(i, 2), 16));
         }
@@ -165,36 +136,38 @@ function getBoardSequence(serverSeed, clientSeed, nonce) {
     return byteSequence;
 }
 
-function processInputData() {
-    const mode = document.querySelector('input[name="verifyMode"]:checked').value;
-    const serverSeed = document.getElementById('serverSeed').value.trim();
+function verifyMinesGame() {
     const clientSeed = document.getElementById('clientSeed').value.trim();
+    const hashedSeed = document.getElementById('hashedSeed').value.trim().toLowerCase();
+    const serverSeed = document.getElementById('serverSeed').value.trim();
+    const nonce = parseInt(document.getElementById('nonce').value) || 1;
     const gridContainer = document.getElementById('minesGrid');
     const statusBox = document.getElementById('statusMessage');
     
     gridContainer.innerHTML = '';
     statusBox.style.display = 'none';
+    statusBox.className = "status-box";
 
-    if(!serverSeed || !clientSeed) {
-        alert("Please enter the seed parameters.");
+    if(!clientSeed || !hashedSeed) {
+        alert("Please provide at least a Client Seed and a Hashed Server Seed.");
         return;
     }
 
-    if (mode === 'hashed') {
-        // HASHED MODE DISPLAY
-        statusBox.innerText = "⚠️ Cryptographic Guard active. Positions are securely masked under SHA-256 and cannot be calculated ahead of time until you rotate your active seed on Stake.";
-        statusBox.style.display = 'block';
-        
-        // Render encrypted safe layout grid
-        for (let i = 0; i < 25; i++) {
-            const tileDiv = document.createElement('div');
-            tileDiv.classList.add('tile', 'unknown');
-            tileDiv.innerText = '❓';
-            gridContainer.appendChild(tileDiv);
+    // Step 1: Validate if Unhashed seed is supplied and matches the Hash signature
+    let canDecrypt = false;
+    if (serverSeed) {
+        let computedHash = CryptoJS.SHA256(serverSeed).toString(CryptoJS.enc.Hex).toLowerCase();
+        if (computedHash === hashedSeed) {
+            canDecrypt = true;
         }
-    } else {
-        // UNHASHED VERIFIER ENGINE
-        const nonce = parseInt(document.getElementById('nonce').value) || 1;
+    }
+
+    if (canDecrypt) {
+        // MATCH CONFIRMED: Execute python 24-step drop sequence logic
+        statusBox.innerText = "✅ Seed verification successful! Unhashed seed matches Hash signature. Revealing authentic game layout.";
+        statusBox.classList.add("status-success");
+        statusBox.style.display = 'block';
+
         let tiles = Array.from({length: 25}, (_, i) => i);
         let bombPositions = new Set();
         let bytesList = getBoardSequence(serverSeed, clientSeed, nonce);
@@ -209,11 +182,13 @@ function processInputData() {
             
             let remainingTiles = 25 - i;
             let chosenIndex = Math.floor(totalFloat * remainingTiles);
+            
             let bombTile = tiles.splice(chosenIndex, 1)[0];
             bombPositions.add(bombTile);
             byteIndex += 4;
         }
 
+        // Display exact decrypted board map
         for (let i = 0; i < 25; i++) {
             const tileDiv = document.createElement('div');
             tileDiv.classList.add('tile');
@@ -226,10 +201,25 @@ function processInputData() {
             }
             gridContainer.appendChild(tileDiv);
         }
+
+    } else {
+        // HASH MISMATCH OR EMPTY: Guard active positions safely
+        statusBox.innerText = "⚠️ Security Guard Active. The provided unhashed seed is either missing or doesn't match the active hash. Board remains safely encrypted.";
+        statusBox.classList.add("status-fail");
+        statusBox.style.display = 'block';
+
+        // Display generic safe hidden grid tiles
+        for (let i = 0; i < 25; i++) {
+            const tileDiv = document.createElement('div');
+            tileDiv.classList.add('tile', 'hidden-tile');
+            tileDiv.innerText = '❓';
+            gridContainer.appendChild(tileDiv);
+        }
     }
 }
 
-window.onload = toggleInputs;
+// Automatically calculate layout structure on window bootup
+window.onload = verifyMinesGame;
 </script>
 
 </body>
