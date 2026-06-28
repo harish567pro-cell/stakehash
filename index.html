@@ -90,27 +90,29 @@
 <div class="container">
     <h2>Mines Guard Tool</h2>
     
-    <div class="input-group">
-        <label for="clientSeed">Client Seed</label>
-        <input type="text" id="clientSeed" value="" placeholder="Enter your client seed...">
-    </div>
+    <form autocomplete="off" onsubmit="return false;">
+        <div class="input-group">
+            <label for="clientSeed">Client Seed</label>
+            <input type="text" id="clientSeed" autocomplete="off" placeholder="Enter your client seed...">
+        </div>
 
-    <div class="input-group">
-        <label for="hashedSeed">Hashed Server Seed</label>
-        <input type="text" id="hashedSeed" value="" placeholder="Enter active hashed server seed...">
-    </div>
-    
-    <div class="input-group">
-        <label for="serverSeed">Unhashed Server Seed</label>
-        <input type="text" id="serverSeed" value="" placeholder="Enter unhashed server seed...">
-    </div>
+        <div class="input-group">
+            <label for="hashedSeed">Hashed Server Seed</label>
+            <input type="text" id="hashedSeed" autocomplete="off" placeholder="Enter active hashed server seed...">
+        </div>
+        
+        <div class="input-group">
+            <label for="serverSeed">Unhashed Server Seed</label>
+            <input type="text" id="serverSeed" autocomplete="off" placeholder="Enter unhashed server seed...">
+        </div>
 
-    <div class="input-group">
-        <label for="nonce">Nonce (Game Bet Number)</label>
-        <input type="number" id="nonce" value="" placeholder="Enter nonce (e.g. 1)..." min="1">
-    </div>
-    
-    <button onclick="verifyMinesGame()">Verify Layout Matrix</button>
+        <div class="input-group">
+            <label for="nonce">Nonce (Game Bet Number)</label>
+            <input type="number" id="nonce" autocomplete="off" placeholder="Enter nonce (e.g. 1)..." min="1">
+        </div>
+        
+        <button type="button" onclick="verifyMinesGame()">Verify Layout Matrix</button>
+    </form>
 
     <div class="status-box" id="statusMessage"></div>
 
@@ -147,7 +149,6 @@ function verifyMinesGame() {
     statusBox.style.display = 'none';
     statusBox.className = "status-box";
 
-    // Enforce basic inputs exist
     if(!clientSeed || !hashedSeed || !nonceText) {
         alert("Please provide a Client Seed, Hashed Server Seed, and a Nonce to start.");
         return;
@@ -155,7 +156,6 @@ function verifyMinesGame() {
 
     const nonce = parseInt(nonceText) || 1;
 
-    // Check if Unhashed seed is entered and matches the Hash signature
     let canDecrypt = false;
     if (serverSeed) {
         let computedHash = CryptoJS.SHA256(serverSeed).toString(CryptoJS.enc.Hex).toLowerCase();
@@ -165,7 +165,6 @@ function verifyMinesGame() {
     }
 
     if (canDecrypt) {
-        // MATCH: Run 24-step drop logic
         statusBox.innerText = "✅ Seed verification successful! Unhashed seed matches Hash signature. Revealing authentic game layout.";
         statusBox.classList.add("status-success");
         statusBox.style.display = 'block';
@@ -190,7 +189,6 @@ function verifyMinesGame() {
             byteIndex += 4;
         }
 
-        // Display exact decrypted board map
         for (let i = 0; i < 25; i++) {
             const tileDiv = document.createElement('div');
             tileDiv.classList.add('tile');
@@ -205,12 +203,10 @@ function verifyMinesGame() {
         }
 
     } else {
-        // BLANK OR MISMATCH: Keep grid locked with question marks
         statusBox.innerText = "⚠️ Security Guard Active. The provided unhashed seed is either missing or doesn't match the active hash. Board remains safely encrypted.";
         statusBox.classList.add("status-fail");
         statusBox.style.display = 'block';
 
-        // Display generic safe hidden grid tiles
         for (let i = 0; i < 25; i++) {
             const tileDiv = document.createElement('div');
             tileDiv.classList.add('tile', 'hidden-tile');
@@ -219,6 +215,14 @@ function verifyMinesGame() {
         }
     }
 }
+
+// Explicitly clear values on hard page load execution
+window.onload = function() {
+    document.getElementById('clientSeed').value = "";
+    document.getElementById('hashedSeed').value = "";
+    document.getElementById('serverSeed').value = "";
+    document.getElementById('nonce').value = "";
+};
 </script>
 
 </body>
