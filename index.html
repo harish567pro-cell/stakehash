@@ -92,22 +92,22 @@
     
     <div class="input-group">
         <label for="clientSeed">Client Seed</label>
-        <input type="text" id="clientSeed" value="CTX9QA5P91">
+        <input type="text" id="clientSeed" value="" placeholder="Enter your client seed...">
     </div>
 
     <div class="input-group">
         <label for="hashedSeed">Hashed Server Seed</label>
-        <input type="text" id="hashedSeed" value="1cc5dc49b12009a9c760523c09e35a7e00eccb411f33cacbb5420e5d38e2dcca" placeholder="Enter SHA-256 string from Stake...">
+        <input type="text" id="hashedSeed" value="" placeholder="Enter active hashed server seed...">
     </div>
     
     <div class="input-group">
         <label for="serverSeed">Unhashed Server Seed</label>
-        <input type="text" id="serverSeed" value="6a2686c13bde9a758fe4585b3070ab322db307db17127048ce5dd4f222db74ae" placeholder="Enter decrypted seed after rotation...">
+        <input type="text" id="serverSeed" value="" placeholder="Enter unhashed server seed...">
     </div>
 
     <div class="input-group">
         <label for="nonce">Nonce (Game Bet Number)</label>
-        <input type="number" id="nonce" value="1" min="1">
+        <input type="number" id="nonce" value="" placeholder="Enter nonce (e.g. 1)..." min="1">
     </div>
     
     <button onclick="verifyMinesGame()">Verify Layout Matrix</button>
@@ -123,7 +123,6 @@ function getBoardSequence(serverSeed, clientSeed, nonce) {
     let byteSequence = [];
     let subNonce = 0;
     
-    // Mimics loop constraint matching the Python while loop (< 96 bytes)
     while (byteSequence.length < 96) {
         let message = `${clientSeed}:${nonce}:${subNonce}`;
         let hash = CryptoJS.HmacSHA256(message, serverSeed).toString(CryptoJS.enc.Hex);
@@ -140,7 +139,7 @@ function verifyMinesGame() {
     const clientSeed = document.getElementById('clientSeed').value.trim();
     const hashedSeed = document.getElementById('hashedSeed').value.trim().toLowerCase();
     const serverSeed = document.getElementById('serverSeed').value.trim();
-    const nonce = parseInt(document.getElementById('nonce').value) || 1;
+    const nonceText = document.getElementById('nonce').value.trim();
     const gridContainer = document.getElementById('minesGrid');
     const statusBox = document.getElementById('statusMessage');
     
@@ -148,12 +147,15 @@ function verifyMinesGame() {
     statusBox.style.display = 'none';
     statusBox.className = "status-box";
 
-    if(!clientSeed || !hashedSeed) {
-        alert("Please provide at least a Client Seed and a Hashed Server Seed.");
+    // Enforce basic inputs exist
+    if(!clientSeed || !hashedSeed || !nonceText) {
+        alert("Please provide a Client Seed, Hashed Server Seed, and a Nonce to start.");
         return;
     }
 
-    // Step 1: Validate if Unhashed seed is supplied and matches the Hash signature
+    const nonce = parseInt(nonceText) || 1;
+
+    // Check if Unhashed seed is entered and matches the Hash signature
     let canDecrypt = false;
     if (serverSeed) {
         let computedHash = CryptoJS.SHA256(serverSeed).toString(CryptoJS.enc.Hex).toLowerCase();
@@ -163,7 +165,7 @@ function verifyMinesGame() {
     }
 
     if (canDecrypt) {
-        // MATCH CONFIRMED: Execute python 24-step drop sequence logic
+        // MATCH: Run 24-step drop logic
         statusBox.innerText = "✅ Seed verification successful! Unhashed seed matches Hash signature. Revealing authentic game layout.";
         statusBox.classList.add("status-success");
         statusBox.style.display = 'block';
@@ -203,7 +205,7 @@ function verifyMinesGame() {
         }
 
     } else {
-        // HASH MISMATCH OR EMPTY: Guard active positions safely
+        // BLANK OR MISMATCH: Keep grid locked with question marks
         statusBox.innerText = "⚠️ Security Guard Active. The provided unhashed seed is either missing or doesn't match the active hash. Board remains safely encrypted.";
         statusBox.classList.add("status-fail");
         statusBox.style.display = 'block';
@@ -217,9 +219,6 @@ function verifyMinesGame() {
         }
     }
 }
-
-// Automatically calculate layout structure on window bootup
-window.onload = verifyMinesGame;
 </script>
 
 </body>
